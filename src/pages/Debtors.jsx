@@ -1,32 +1,46 @@
+import SearchBox from "../components/SearchBox";
 import { useEffect, useState } from "react";
-
 
 export default function Debtors() {
 
-
   const [debts, setDebts] = useState([]);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+  loadDebts();
+}, []);
+
+function loadDebts() {
+  let data = JSON.parse(localStorage.getItem("debts")) || [];
+
+  // Eski formatlarni yangi formatga o'tkazish
+  data = data.map((item) => ({
+    ...item,
+
+    // Qarzdor nomi
+    customer:
+      item.customer ||
+      item.customerName ||
+      item.name ||
+      "",
+
+    // To'langan summa
+    paid: item.paid || 0,
+
+    // Tarix bo'lmasa bo'sh massiv
+    history: item.history || [],
+
+    // Jami qarz
+    total: Number(item.total || 0),
+  }));
+
+  // Yangilangan ma'lumotni saqlash
+  localStorage.setItem("debts", JSON.stringify(data));
+
+  setDebts(data);
+}
 
 
-
-  useEffect(()=>{
-
-    loadDebts();
-
-  },[]);
-
-
-
-
-  function loadDebts(){
-
-    const data = JSON.parse(
-      localStorage.getItem("debts")
-    ) || [];
-
-
-    setDebts(data);
-
-  }
 
 
 
@@ -41,7 +55,7 @@ export default function Debtors() {
 
 
 
-    if(!payment || payment <= 0){
+    if(!payment || payment<=0){
 
       return;
 
@@ -50,29 +64,42 @@ export default function Debtors() {
 
 
 
+
+
     const updated = debts.map(item=>{
 
 
-      if(item.id === id){
+      if(item.id===id){
 
 
         return {
 
+
           ...item,
 
-          paid: (item.paid || 0) + payment,
+
+          paid:(item.paid || 0) + payment,
+
 
 
           history:[
+
             ...(item.history || []),
 
+
             {
+
               type:"To'lov",
+
               amount:payment,
+
               date:new Date().toLocaleString()
+
             }
 
+
           ]
+
 
         };
 
@@ -80,10 +107,13 @@ export default function Debtors() {
       }
 
 
+
       return item;
 
 
     });
+
+
 
 
 
@@ -104,6 +134,8 @@ export default function Debtors() {
 
 
   }
+
+
 
 
 
@@ -116,7 +148,7 @@ export default function Debtors() {
 
     const updated = debts.filter(
 
-      item=>item.id !== id
+      item=>item.id!==id
 
     );
 
@@ -136,6 +168,9 @@ export default function Debtors() {
 
 
   }
+
+
+
 
 
 
@@ -149,39 +184,60 @@ export default function Debtors() {
 
 
       <h1>👥 Qarzdorlar</h1>
+<SearchBox
+  value={search}
+  onChange={setSearch}
+  placeholder="Mijozni qidiring..."
+/>
+
+<br />
+
 
 
 
       {
-        debts.length === 0 ?
+        debts.length===0 ?
 
 
-        (
 
-          <div className="sale-box">
+        <div className="sale-box">
 
-            <h3>
-              Qarzdorlar mavjud emas
-            </h3>
+          <h3>
+            Qarzdorlar mavjud emas
+          </h3>
 
-          </div>
 
-        )
+        </div>
+
 
 
         :
 
 
 
-        debts.map(item=>{
+        debts
+  .filter(item => {
+    const customer =
+      item.customer ||
+      item.customerName ||
+      item.name ||
+      "";
 
+    return customer
+      .trim()
+      .toLowerCase()
+      .includes(search.trim().toLowerCase());
+  })
+  .map(item => {
 
           const remaining =
           item.total - (item.paid || 0);
 
 
 
-          return(
+
+          return (
+
 
 
           <div
@@ -190,8 +246,9 @@ export default function Debtors() {
 
           key={item.id}
 
-
           >
+
+
 
 
 
@@ -201,41 +258,101 @@ export default function Debtors() {
 
 
 
-            <p>
-              📦 Mahsulot:
-              {" "}
-              {item.product}
-            </p>
+
+
+
+            <h3>
+              📦 Olingan mahsulotlar:
+            </h3>
+
+
+
+
+
+            {
+              item.history?.map((h,index)=>{
+
+
+                if(h.type==="To'lov"){
+
+                  return null;
+
+                }
+
+
+
+                return (
+
+                  <p key={index}>
+
+                    📦 {h.product}
+
+                    {" | "}
+
+                    🔢 {h.quantity} dona
+
+                    {" | "}
+
+                    💰 {h.amount.toLocaleString()} so'm
+
+                    <br/>
+
+                    📅 {h.date}
+
+                  </p>
+
+
+                );
+
+
+              })
+
+            }
+
+
+
+
+
+
+
+            <hr/>
+
+
+
 
 
 
             <p>
-              🔢 Miqdor:
-              {" "}
-              {item.quantity}
-            </p>
 
-
-
-
-            <p>
               💰 Jami qarz:
+
               {" "}
+
               {item.total.toLocaleString()}
-              {" "}
+
               so'm
+
             </p>
+
+
 
 
 
 
             <p>
+
               ✅ To'langan:
+
               {" "}
+
               {(item.paid || 0).toLocaleString()}
-              {" "}
+
               so'm
+
             </p>
+
+
+
 
 
 
@@ -248,47 +365,55 @@ export default function Debtors() {
 
               {remaining.toLocaleString()}
 
-              {" "}
-
               so'm
-
 
             </h3>
 
 
 
 
-            <p>
-              📅 Sana:
-              {" "}
-              {item.date}
-            </p>
 
 
 
 
 
             <h3>
-              📜 To'lov tarixi
+              📜 Tarix
             </h3>
 
 
 
+
+
             {
+
               item.history?.map((h,index)=>(
 
 
                 <p key={index}>
 
+
                   {h.date}
 
                   {" - "}
 
-                  {h.type}
 
-                  :
 
-                  {" "}
+                  {
+
+                    h.type==="To'lov"
+
+                    ?
+
+                    "💵 To'lov: "
+
+                    :
+
+                    "📦 Sotuv: "
+
+                  }
+
+
 
                   {h.amount.toLocaleString()}
 
@@ -324,8 +449,11 @@ export default function Debtors() {
 
 
 
+
+
             {
-              remaining <=0 &&
+
+              remaining<=0 &&
 
 
               <button
@@ -340,7 +468,11 @@ export default function Debtors() {
 
               </button>
 
+
             }
+
+
+
 
 
 
@@ -348,12 +480,15 @@ export default function Debtors() {
           </div>
 
 
-          )
+          );
 
 
         })
 
+
       }
+
+
 
 
 

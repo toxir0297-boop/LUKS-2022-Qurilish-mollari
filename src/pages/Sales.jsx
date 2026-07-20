@@ -19,18 +19,15 @@ export default function Sales() {
 
   useEffect(()=>{
 
-
     const data = getProducts();
-
 
     setProducts(data);
 
-
-    setProduct(data[0]);
-
+    if(data.length > 0){
+      setProduct(data[0]);
+    }
 
   },[]);
-
 
 
 
@@ -48,11 +45,19 @@ export default function Sales() {
 
 
     if(!product){
+      alert("Mahsulot tanlang!");
+      return;
+    }
+
+
+
+    if(Number(quantity)<=0){
+
+      alert("Miqdor noto'g'ri!");
 
       return;
 
     }
-
 
 
 
@@ -63,9 +68,7 @@ export default function Sales() {
         "❌ Omborda mahsulot yetarli emas!"
       );
 
-
       return;
-
 
     }
 
@@ -73,16 +76,14 @@ export default function Sales() {
 
 
 
-    if(paymentType === "credit" && customer.trim()===""){
+    if(paymentType==="credit" && customer.trim()===""){
 
 
       alert(
         "Nasiya uchun mijoz ismini kiriting!"
       );
 
-
       return;
-
 
     }
 
@@ -90,17 +91,19 @@ export default function Sales() {
 
 
 
-    // OMBORDAN AYIRISH
 
 
-    const warehouse = getProducts();
+    // OMBORNI YANGILASH
+
+
+    const warehouse=getProducts();
 
 
 
-    const updatedWarehouse = warehouse.map(item=>{
+    const updatedWarehouse=warehouse.map(item=>{
 
 
-      if(item.id === product.id){
+      if(item.id===product.id){
 
 
         return {
@@ -126,6 +129,7 @@ export default function Sales() {
     saveProducts(updatedWarehouse);
 
 
+
     setProducts(updatedWarehouse);
 
 
@@ -133,8 +137,58 @@ export default function Sales() {
 
 
 
+    // SOTUV TARIXI
 
-    // NAQD SOTUV
+
+    const sales=
+    JSON.parse(localStorage.getItem("sales")) || [];
+
+
+
+    sales.push({
+
+      id:Date.now(),
+
+      customer:
+      paymentType==="cash"
+      ? "Naqd xaridor"
+      : customer,
+
+
+      product:product.name,
+
+
+      quantity:Number(quantity),
+
+
+      price:product.price,
+
+
+      total:total,
+
+
+      paymentType,
+
+
+      date:new Date().toLocaleString()
+
+    });
+
+
+
+    localStorage.setItem(
+      "sales",
+      JSON.stringify(sales)
+    );
+
+
+
+
+
+
+
+
+    // NAQD
 
 
     if(paymentType==="cash"){
@@ -159,10 +213,8 @@ export default function Sales() {
 
       setQuantity("1");
 
-
       return;
 
-
     }
 
 
@@ -171,126 +223,78 @@ export default function Sales() {
 
 
 
-    // NASIYA SOTUV
 
+    // NASIYA
 
 
-    const debts = JSON.parse(
+    // ===== NASIYA =====
 
-      localStorage.getItem("debts")
+const debts = JSON.parse(localStorage.getItem("debts")) || [];
 
-    ) || [];
+// Eski yozuvlarni yangi formatga o'tkazish
+const fixedDebts = debts.map(item => ({
+  ...item,
+  customer: item.customer || item.customerName || item.name || "",
+  paid: Number(item.paid || 0),
+  total: Number(item.total || 0),
+  history: item.history || []
+}));
 
+const customerName = customer.trim();
 
+const index = fixedDebts.findIndex(
+  item =>
+    item.customer.trim().toLowerCase() ===
+    customerName.toLowerCase()
+);
 
+const newHistory = {
+  product: product.name,
+  quantity: Number(quantity),
+  amount: total,
+  date: new Date().toLocaleString()
+};
 
+if (index !== -1) {
 
-    const index = debts.findIndex(
+  fixedDebts[index].total += total;
 
-      item=>item.customer===customer
+  fixedDebts[index].history.push(newHistory);
 
-    );
+} else {
 
+  fixedDebts.push({
 
+    id: Date.now(),
 
+    customer: customerName,
 
+    total: total,
 
-    if(index!==-1){
+    paid: 0,
 
+    date: new Date().toLocaleString(),
 
-      debts[index].total += total;
+    history: [newHistory]
 
+  });
 
+}
 
-      debts[index].history.push({
+localStorage.setItem(
+  "debts",
+  JSON.stringify(fixedDebts)
+);
 
 
-        product:product.name,
-
-        quantity:Number(quantity),
-
-        amount:total,
-
-        date:new Date().toLocaleString()
-
-
-      });
-
-
-
-    }
-
-    else{
-
-
-      debts.push({
-
-
-        id:Date.now(),
-
-
-        customer:customer,
-
-
-        product:product.name,
-
-
-        quantity:Number(quantity),
-
-
-        total:total,
-
-
-        paid:0,
-
-
-        date:new Date().toLocaleString(),
-
-
-
-        history:[{
-
-
-          product:product.name,
-
-          quantity:Number(quantity),
-
-          amount:total,
-
-          date:new Date().toLocaleString()
-
-
-        }]
-
-
-
-      });
-
-
-    }
-
-
-
-
-
-    localStorage.setItem(
-
-      "debts",
-
-      JSON.stringify(debts)
-
-    );
 
 
 
 
 
     alert(
-
       "✅ Nasiya sotuv saqlandi!"
-
     );
-
 
 
 
@@ -301,6 +305,7 @@ export default function Sales() {
 
 
   }
+
 
 
 
@@ -322,6 +327,7 @@ export default function Sales() {
 
 
         <h3>To'lov turi</h3>
+
 
 
 
@@ -365,24 +371,25 @@ export default function Sales() {
 
 
 
+
+
         {
-          paymentType==="credit" && (
+          paymentType==="credit" &&
 
-            <input
+          <input
 
-            className="sale-input"
+          className="sale-input"
 
-            placeholder="Mijoz ismi"
+          placeholder="Mijoz ismi"
 
-            value={customer}
+          value={customer}
 
-            onChange={e=>setCustomer(e.target.value)}
+          onChange={e=>setCustomer(e.target.value)}
 
-            />
-
-          )
+          />
 
         }
+
 
 
 
@@ -403,7 +410,8 @@ export default function Sales() {
         onChange={e=>{
 
 
-          const selected = products.find(
+          const selected =
+          products.find(
 
             item=>item.id===Number(e.target.value)
 
@@ -416,12 +424,13 @@ export default function Sales() {
         }}
 
 
+
         >
+
 
 
         {
           products.map(item=>(
-
 
             <option
 
@@ -431,7 +440,8 @@ export default function Sales() {
 
             >
 
-              {item.name} (qoldiq: {item.stock})
+            {item.name} 
+            (qoldiq: {item.stock})
 
             </option>
 
@@ -441,7 +451,10 @@ export default function Sales() {
         }
 
 
+
         </select>
+
+
 
 
 
@@ -462,9 +475,13 @@ export default function Sales() {
 
         value={quantity}
 
-        onChange={e=>setQuantity(e.target.value)}
+        onChange={
+          e=>setQuantity(e.target.value)
+        }
 
         />
+
+
 
 
 
@@ -486,6 +503,8 @@ export default function Sales() {
 
 
 
+
+
         <button
 
         className="sell-btn"
@@ -500,7 +519,10 @@ export default function Sales() {
 
 
 
+
+
       </div>
+
 
 
     </div>
